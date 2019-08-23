@@ -12,6 +12,7 @@ force-directed graph를 그린다.
 
 
 <현재 진행사항>
+
 1.네트워크 데이터를 만든다.
 -csv를 json으로 형식을 만든다.
 -각 투표 사건마다 어느나라가 찬성/반대/기권 했는지 데이터를 만든다.
@@ -21,8 +22,8 @@ edge는 각 나라의 similarity 상위 2개이다. 이렇게 데이터를 만�
 
 node:
 {
-  name: USA,
-  fullName: United States of America,
+  country: USA,
+  countryName: United States of America,
   similarities: {
     1970: {
       KOR: 0.7,
@@ -39,10 +40,22 @@ node:
       CHN: 1.1
     }
   },
-  neighbors: {
-
+  neighbors: { // 상위 2개만 있는 것들
+    1970: {
+      KOR: 0.7,
+      JP: 0.6
+    },
+    ...,
+    total: {
+      KOR: 3.1,
+      JP: 2.8,
+      CHN: 0.5
+    }
   }
 }
+유사성이 가장 높은 2개로 edge가 만들어 진다.
+super-graph에서는 각 연도별 유사성 높은 2개를 가중치한 것들을 모아둔 것으로 한다.
+
 
 edge:
 {
@@ -63,5 +76,6 @@ edge:
 ```
 
 ```
-bufferGeometry를 사용하니까 되네.
+-대용량 json 읽어 올때 js 실행하는 방법
+node --max-old-space-size=8192 --stack-size=1968 src/refiningData/refiningData.js
 ```

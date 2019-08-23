@@ -1,12 +1,10 @@
 /**
- * 기본 Three.js + vue
+ * sample data를 hash로 만든 network
  */
 
 import { Component, Vue } from 'vue-property-decorator';
 import * as THREE from 'three';
 import _ from 'lodash';
-
-import marriageContractData from './marriageContractData.json';
 
 @Component({
   components: {
@@ -19,8 +17,8 @@ export default class Home extends Vue {
   private renderer: any = null;
 
   // sample nodes, edges
-  private sampleNodes = [
-    {
+  private sampleNodesHash = {
+    1: {
       id: '1',
       label: 'Allemand Pere (Marc Allemand)',
       x: 0,
@@ -29,7 +27,7 @@ export default class Home extends Vue {
       forceY: 0,
       neighbors: ['2', '3', '4', '5']
     },
-    {
+    2: {
       id: '2',
       label: 'Etienne Allemand',
       x: 0,
@@ -38,7 +36,7 @@ export default class Home extends Vue {
       forceY: 0,
       neighbors: ['1', '3', '4']
     },
-    {
+    3: {
       id: '3',
       label: 'Marie Giraud',
       x: 0,
@@ -47,7 +45,7 @@ export default class Home extends Vue {
       forceY: 0,
       neighbors: []
     },
-    {
+    4: {
       id: '4',
       label: 'Elizabeth Glaumont',
       x: 0,
@@ -56,7 +54,7 @@ export default class Home extends Vue {
       forceY: 0,
       neighbors: ['1', '3']
     },
-    {
+    5: {
       id: '5',
       label: 'Louis Merceron',
       x: 0,
@@ -65,7 +63,7 @@ export default class Home extends Vue {
       forceY: 0,
       neighbors: ['1']
     }
-  ];
+  };
 
   private sampleNodeMeshes: THREE.Mesh[] = [];
   private sampleEdgeMeshes: THREE.Line[] = [];
@@ -104,7 +102,7 @@ export default class Home extends Vue {
     const material = new THREE.MeshBasicMaterial();
     material.color.setHex(0xefefef);
 
-    _.forEach(this.sampleNodes, node => {
+    _.forEach(this.sampleNodesHash, node => {
       const nodeMesh = new THREE.Mesh(nodeGeometry, material);
       this.sampleNodeMeshes.push(nodeMesh);
       node.x = Math.random() * 20 - 10;
@@ -125,9 +123,7 @@ export default class Home extends Vue {
       color: 0xffffff
     });
 
-    // tslint:disable-next-line: prefer-for-of
-    for (let i = 0; i < this.sampleNodes.length; i++) {
-      const node = this.sampleNodes[i];
+    _.forEach(this.sampleNodesHash, node => {
       _.forEach(node.neighbors, neighbor => {
         if (node.id <= neighbor) {
           // edge를 추가한다.
@@ -145,7 +141,7 @@ export default class Home extends Vue {
           this.scene.add(edgeMesh);
         }
       });
-    }
+    });
 
     // renderer는 그리기 객체이다.
     this.renderer = new THREE.WebGLRenderer({
@@ -156,21 +152,29 @@ export default class Home extends Vue {
     this.renderer.setSize(container.clientWidth, container.clientHeight);
     container.appendChild(this.renderer.domElement);
   }
+
+  /**
+   * 애니메이션을 주는 함수이다.
+   */
   private animate() {
     // 다음 프레임때 animate()함수를 실행시키는 함수인듯
     requestAnimationFrame(this.animate);
 
     // initialize net forces
-    _.forEach(this.sampleNodes, node => {
+    _.forEach(this.sampleNodesHash, node => {
       node.forceX = 0;
       node.forceY = 0;
     });
 
     // repulsion between all pairs
-    for (let i = 0; i < this.sampleNodes.length - 1; i++) {
-      const node1 = this.sampleNodes[i];
-      for (let j = i + 1; j < this.sampleNodes.length; j++) {
-        const node2 = this.sampleNodes[j];
+    const sampleNodesHashKeys = Object.keys(this.sampleNodesHash);
+    // for (let i = 0; i < this.sampleNodes.length - 1; i++) {
+    for (let i = 0; i < sampleNodesHashKeys.length - 1; i++) {
+      const node1Id = sampleNodesHashKeys[i];
+      const node1 = this.sampleNodesHash[node1Id];
+      for (let j = i + 1; j < sampleNodesHashKeys.length; j++) {
+        const node2Id = sampleNodesHashKeys[j];
+        const node2 = this.sampleNodesHash[node2Id];
         const dx: number = node2.x - node1.x;
         const dy: number = node2.y - node1.y;
         if (dx !== 0 || dy !== 0) {
@@ -187,15 +191,17 @@ export default class Home extends Vue {
       }
     }
 
+    // }
+
     // spring force between adjacent pairs
     // tslint:disable-next-line: prefer-for-of
-    for (let i = 0; i < this.sampleNodes.length; i++) {
-      const node1 = this.sampleNodes[i];
+    for (let i = 0; i < sampleNodesHashKeys.length; i++) {
+      const node1Id = sampleNodesHashKeys[i];
+      const node1 = this.sampleNodesHash[node1Id];
       // tslint:disable-next-line: prefer-for-of
       for (let j = 0; j < node1.neighbors.length; j++) {
         const i2 = node1.neighbors[j];
-        // TODO 현재 -1씩 내려야 한다.
-        const node2 = this.sampleNodes[i2];
+        const node2 = this.sampleNodesHash[i2];
 
         if (node1.id < node2.id) {
           const dx = node2.x - node1.x;
@@ -215,8 +221,9 @@ export default class Home extends Vue {
     }
 
     // update positions
-    for (let i = 0; i < this.sampleNodes.length; i++) {
-      const node = this.sampleNodes[i];
+    for (let i = 0; i < sampleNodesHashKeys.length; i++) {
+      const nodeId = sampleNodesHashKeys[i];
+      const node = this.sampleNodesHash[nodeId];
       let dx = this.deltaT * node.forceX;
       let dy = this.deltaT * node.forceY;
 
@@ -238,16 +245,17 @@ export default class Home extends Vue {
 
     let m = 0;
     // tslint:disable-next-line: prefer-for-of
-    for (let i = 0; i < this.sampleNodes.length; i++) {
-      const node = this.sampleNodes[i];
+    for (let i = 0; i < sampleNodesHashKeys.length; i++) {
+      const nodeId = sampleNodesHashKeys[i];
+      const node = this.sampleNodesHash[nodeId];
       _.forEach(node.neighbors, neighbor => {
         if (node.id <= neighbor) {
           // edge의 point의 위치를 조정한다.
           this.sampleEdgeMeshes[m].geometry.setFromPoints([
             new THREE.Vector3(node.x, node.y, 0),
             new THREE.Vector3(
-              this.sampleNodes[neighbor].x,
-              this.sampleNodes[neighbor].y,
+              this.sampleNodesHash[neighbor].x,
+              this.sampleNodesHash[neighbor].y,
               0
             )
           ]);

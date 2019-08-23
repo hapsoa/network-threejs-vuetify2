@@ -11,7 +11,7 @@
       </v-btn>
     </v-app-bar>
 
-    <v-navigation-drawer app>
+    <!-- <v-navigation-drawer app>
       <v-list-item>
         <v-list-item-content>
           <v-list-item-title class="title">Application</v-list-item-title>
@@ -32,7 +32,7 @@
           </v-list-item-content>
         </v-list-item>
       </v-list>
-    </v-navigation-drawer>
+    </v-navigation-drawer>-->
 
     <v-content>
       <!-- <HelloWorld /> -->
