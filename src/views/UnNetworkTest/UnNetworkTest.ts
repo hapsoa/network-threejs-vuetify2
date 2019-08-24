@@ -8,6 +8,8 @@ import { Component, Vue } from 'vue-property-decorator';
 import * as THREE from 'three';
 import _ from 'lodash';
 
+import unNodesHash from '@/refiningData/result-directory/refinedData.json';
+
 interface Node {
   id: string;
   label: string;

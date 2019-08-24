@@ -1,4 +1,10 @@
-import _ from 'lodash';
+import { LoDashStatic } from 'lodash';
 
-console.log('ya');
-console.log(_);
+// tslint:disable: no-var-requires
+
+const _: LoDashStatic = require('lodash');
+
+const hash = {
+  USA: 2,
+  KOR: 1
+};

@@ -20,6 +20,16 @@ interface Node {
   neighbors: CountryCountHashPerNumber;
 }
 
+// interface Node {
+//   id: string;
+//   label: string;
+//   x: number;
+//   y: number;
+//   forceX: number;
+//   forceY: number;
+//   neighbors: string[];
+// }
+
 interface NodesHash {
   [nodeName: string]: Node;
 }
@@ -39,9 +49,7 @@ interface CountryCountHash {
   [country: string]: number;
 }
 interface CountryByCountryCountHash {
-  [country: string]: {
-    [otherCountry: string]: number;
-  };
+  [country: string]: CountryCountHash;
 }
 interface CountryByCountryCountHashPerNumber {
   // rcid, year
@@ -54,7 +62,7 @@ interface CountryCountHashPerNumber {
 
 const _: LoDashStatic = require('lodash');
 const fs = require('fs');
-const unJsonData: UnDatum[] = require('./data-directory/small-UNdata.json');
+const unJsonData: UnDatum[] = require('./data-directory/2year-UNdata.json');
 
 const jsonFileResultPath = 'src/refiningData/result-directory/refinedData.json';
 
@@ -105,23 +113,23 @@ function initiate(unData: UnDatum[]) {
     numOfRcidsPerYearHash,
     unData
   });
-  console.log('similaritiesHashPerYear', similaritiesHashPerYear);
+  // console.log('similaritiesHashPerYear', similaritiesHashPerYear);
 
   // 각 노드별로 neighbors를 구한다.
-  makeNeighborsAll({ nodesHash, similaritiesHashPerYear });
+  const neighboredNodesHash = makeNeighborsAll({
+    nodesHash,
+    similaritiesHashPerYear
+  });
+  // console.log('neighboredNodesHash', neighboredNodesHash);
 
   // 파일을 쓴다.
-  // fs.writeFile(
-  //   jsonFileResultPath,
-  //   JSON.stringify(similaritiesHashPerYear),
-  //   err => {
-  //     if (err) {
-  //       console.error(err);
-  //       return;
-  //     }
-  //     console.log('File has been created');
-  //   }
-  // );
+  fs.writeFile(jsonFileResultPath, JSON.stringify(neighboredNodesHash), err => {
+    if (err) {
+      console.error(err);
+      return;
+    }
+    console.log('File has been created');
+  });
 }
 
 /**
@@ -319,7 +327,7 @@ function makeSimilaritiesHashPerYear(o: {
       });
     });
   });
-  console.log('similaritiesHashPerYear', similaritiesHashPerYear);
+  // console.log('similaritiesHashPerYear', similaritiesHashPerYear);
 
   // 연도별 사건의 수만큼 나눈다
   _.forEach(similaritiesHashPerYear, (similaritiesHash, year) => {
@@ -361,21 +369,48 @@ function makeNeighborsAll(o: {
 }) {
   _.forEach(o.nodesHash, (node, country) => {
     // node마다 neighbors를 만든다.
-    // node.neighbors = makeNeighBors(node, o.similaritiesHashPerYear);
+    _.forEach(o.similaritiesHashPerYear, (similaritiesHashForYear, year) => {
+      node.neighbors[year] = makeNeighBorsForYear(
+        similaritiesHashForYear[node.Country]
+      );
+    });
   });
 
-  const neighbors: CountryCountHashPerNumber = {};
+  return o.nodesHash;
 }
 
-function makeNeighBors(
-  node: Node,
-  similaritiesHashPerYear: CountryByCountryCountHashPerNumber
-) {
-  _.forEach(similaritiesHashPerYear, (similaritiesHash, year) => {
-    // 이 중에서 가장 높은 2개로 한다.
-    // similaritiesHash[node.Country];
-    // _.sortBy()
+/**
+ *
+ * @param similaritiesHash : 해당 연도에서 한 노드의 다른나라와의 similarity hash
+ */
+function makeNeighBorsForYear(
+  similaritiesHash: CountryCountHash
+): CountryCountHash {
+  const neighbors: CountryCountHash = {};
+  const similarityPassScore: number = 0.5;
+
+  // 가장 높은 노드 2개로 할까?
+  const limitCount: number = 2;
+  let currentCount: number = 0;
+  _.forEach(similaritiesHash, (similarity, otherCountry) => {
+    if (similarity >= similarityPassScore) {
+      neighbors[otherCountry] = similarity;
+      currentCount++;
+    }
+    if (currentCount >= limitCount) {
+      return false;
+    }
   });
+
+  // 높은 점수 두개로 둘까?
+  // 혹은 일정 similarity 점수 이상으로 만든다.
+  // _.forEach(similaritiesHash, (similarity, otherCountry) => {
+  //   if (similarity >= similarityPassScore) {
+  //     neighbors[otherCountry] = similarity;
+  //   }
+  // });
+
+  return neighbors;
 }
 
 //

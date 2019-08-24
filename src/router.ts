@@ -8,14 +8,22 @@ export default new Router({
   mode: 'history',
   base: process.env.BASE_URL,
   routes: [
+    // 일반 force-directed network
     {
       path: '/',
       name: 'home',
       component: Home
     },
+    // hash data로 force-directed network
     {
       path: '/hashdata-network',
       name: 'hashdata-network',
+      component: () => import('./views/HashDataNetwork')
+    },
+    // un data로 force-directed graph 테스트
+    {
+      path: '/unnetwork-test',
+      name: 'unnetwork-test',
       component: () => import('./views/HashDataNetwork')
     },
     {
