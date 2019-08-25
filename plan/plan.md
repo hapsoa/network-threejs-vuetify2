@@ -58,6 +58,12 @@ super-graph에서는 각 연도별 유사성 높은 2개를 가중치한 것들�
 
 **
 -Node 타입을 정한다.
+-화면에 해당 데이터로 그린다.
+-neighbor가 연도마다 있기 때문에 오류가 발생한다.
+-각 연도를 모두 합쳐야 할까? total값 말이다.
+-total을 데이터에서 만들도록 한다.
+-total은 각 연도마다의 값을 모두 더한 값으로 하자.
+-total로 edge를 형성한다.
 -weight를 준다.
 
 -html 레이아웃을 잡는다.
@@ -89,5 +95,5 @@ edge:
 
 ```
 -대용량 json 읽어 올때 js 실행하는 방법
-node --max-old-space-size=8192 --stack-size=1968 src/refiningData/refiningData.js
+node --max-old-space-size=8192 --stack-size=1968 src/refiningData/refiningData2.ts
 ```

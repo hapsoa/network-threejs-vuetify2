@@ -1,5 +1,7 @@
 import { LoDashStatic } from 'lodash';
 
+// import { LoDashStatic } from 'lodash';
+
 // tslint:disable: no-var-requires
 // tslint:disable: prefer-for-of
 
@@ -15,9 +17,13 @@ interface UnDatum {
 }
 
 interface Node {
-  Country: string;
-  Countryname: string;
-  neighbors: CountryCountHashPerNumber;
+  id: string;
+  label: string;
+  x: number;
+  y: number;
+  forceX: number;
+  forceY: number;
+  neighbors: CountryCountHashPerKey;
 }
 
 // interface Node {
@@ -55,9 +61,9 @@ interface CountryByCountryCountHashPerNumber {
   // rcid, year
   [number: number]: CountryByCountryCountHash;
 }
-interface CountryCountHashPerNumber {
-  // rcid, year
-  [number: number]: CountryCountHash;
+interface CountryCountHashPerKey {
+  // rcid, year(total)
+  [key: string]: CountryCountHash;
 }
 
 const _: LoDashStatic = require('lodash');
@@ -142,8 +148,12 @@ function makeBasicNodesHash(unData: UnDatum[]): NodesHash {
     const datum = unData[i];
     if (firstRcid === datum.rcid) {
       nodesHash[datum.Country] = {
-        Country: datum.Country,
-        Countryname: datum.Countryname,
+        id: datum.Country,
+        label: datum.Countryname,
+        x: 0,
+        y: 0,
+        forceX: 0,
+        forceY: 0,
         neighbors: {}
       };
     } else {
@@ -190,7 +200,7 @@ function makeBasicCountryProperty(
 /**
  * 사건별로 나라 투표현황을 만드는 함수이다.
  */
-function makeVotesHashPerRcid(unData: UnDatum[]): CountryCountHashPerNumber {
+function makeVotesHashPerRcid(unData: UnDatum[]): CountryCountHashPerKey {
   // {
   //   rcid1: {
   //     KOR: 1,
@@ -198,7 +208,7 @@ function makeVotesHashPerRcid(unData: UnDatum[]): CountryCountHashPerNumber {
   //   },
   //   ...
   // }
-  const votesHashPerRcid: CountryCountHashPerNumber = {};
+  const votesHashPerRcid: CountryCountHashPerKey = {};
 
   for (let i = 0; i < unData.length; i++) {
     const datum = unData[i];
@@ -243,7 +253,7 @@ function checkSimilarVoteForRcid(
  */
 function makeSimilarVotesHashPerRcid(
   unData: UnDatum[],
-  votesHashPerRcid: CountryCountHashPerNumber
+  votesHashPerRcid: CountryCountHashPerKey
 ): CountryByCountryCountHashPerNumber {
   // {
   //   rcid1: {
@@ -369,14 +379,35 @@ function makeNeighborsAll(o: {
 }) {
   _.forEach(o.nodesHash, (node, country) => {
     // node마다 neighbors를 만든다.
+    // neighbors에 연도별 property를 만든다.
     _.forEach(o.similaritiesHashPerYear, (similaritiesHashForYear, year) => {
       node.neighbors[year] = makeNeighBorsForYear(
-        similaritiesHashForYear[node.Country]
+        similaritiesHashForYear[node.id]
       );
     });
+    // neighbors에 total property를 만든다.
+    node.neighbors.total = makeTotalNeighbor(node.neighbors);
   });
 
   return o.nodesHash;
+}
+
+/**
+ * 연도별 neighbors를 가지고 total property를 만드는 함수이다.
+ * @param neighbors : 연도별로 highest similarity를 가진 다른 두 나라의 similarity를 가진 객체
+ */
+function makeTotalNeighbor(neighbors: CountryCountHashPerKey): CountryCountHash {
+  const totalNeighbor: CountryCountHash = {};
+  _.forEach(neighbors, (otherCountryObject, year) => {
+    _.forEach(otherCountryObject, (similarity, otherCountry) => {
+      if (!_.has(totalNeighbor, otherCountry)) {
+        totalNeighbor[otherCountry] = 0;
+      }
+      totalNeighbor[otherCountry] += similarity;
+    });
+  });
+  // console.log('totalNeighbor', totalNeighbor);
+  return totalNeighbor;
 }
 
 /**

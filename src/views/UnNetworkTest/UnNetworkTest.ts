@@ -8,16 +8,23 @@ import { Component, Vue } from 'vue-property-decorator';
 import * as THREE from 'three';
 import _ from 'lodash';
 
-import unNodesHash from '@/refiningData/result-directory/refinedData.json';
+import unNodesHashJson from '@/refiningData/result-directory/refinedData.json';
 
+interface CountryCountHash {
+  [country: string]: number;
+}
+interface CountryCountHashPerKey {
+  // rcid, year(total)
+  [key: string]: CountryCountHash;
+}
 interface Node {
-  id: string;
-  label: string;
+  id: string; // Country
+  label: string; // Countryname
   x: number;
   y: number;
   forceX: number;
   forceY: number;
-  neighbors: string[];
+  neighbors: CountryCountHashPerKey;
 }
 
 @Component({
@@ -31,53 +38,56 @@ export default class Home extends Vue {
   private renderer: any = null;
 
   // sample nodes, edges
-  private sampleNodesHash: { [nodeId: string]: Node } = {
-    1: {
-      id: '1',
-      label: 'Allemand Pere (Marc Allemand)',
-      x: 0,
-      y: 0,
-      forceX: 0,
-      forceY: 0,
-      neighbors: ['2', '3', '4', '5']
-    },
-    2: {
-      id: '2',
-      label: 'Etienne Allemand',
-      x: 0,
-      y: 0,
-      forceX: 0,
-      forceY: 0,
-      neighbors: ['1', '3', '4']
-    },
-    3: {
-      id: '3',
-      label: 'Marie Giraud',
-      x: 0,
-      y: 0,
-      forceX: 0,
-      forceY: 0,
-      neighbors: []
-    },
-    4: {
-      id: '4',
-      label: 'Elizabeth Glaumont',
-      x: 0,
-      y: 0,
-      forceX: 0,
-      forceY: 0,
-      neighbors: ['1', '3']
-    },
-    5: {
-      id: '5',
-      label: 'Louis Merceron',
-      x: 0,
-      y: 0,
-      forceX: 0,
-      forceY: 0,
-      neighbors: ['1']
-    }
-  };
+  // private sampleNodesHash: { [nodeId: string]: Node } = {
+  //   1: {
+  //     id: '1',
+  //     label: 'Allemand Pere (Marc Allemand)',
+  //     x: 0,
+  //     y: 0,
+  //     forceX: 0,
+  //     forceY: 0,
+  //     neighbors: ['2', '3', '4', '5']
+  //   },
+  //   2: {
+  //     id: '2',
+  //     label: 'Etienne Allemand',
+  //     x: 0,
+  //     y: 0,
+  //     forceX: 0,
+  //     forceY: 0,
+  //     neighbors: ['1', '3', '4']
+  //   },
+  //   3: {
+  //     id: '3',
+  //     label: 'Marie Giraud',
+  //     x: 0,
+  //     y: 0,
+  //     forceX: 0,
+  //     forceY: 0,
+  //     neighbors: []
+  //   },
+  //   4: {
+  //     id: '4',
+  //     label: 'Elizabeth Glaumont',
+  //     x: 0,
+  //     y: 0,
+  //     forceX: 0,
+  //     forceY: 0,
+  //     neighbors: ['1', '3']
+  //   },
+  //   5: {
+  //     id: '5',
+  //     label: 'Louis Merceron',
+  //     x: 0,
+  //     y: 0,
+  //     forceX: 0,
+  //     forceY: 0,
+  //     neighbors: ['1']
+  //   }
+  // };
+  private unNodesHash: {
+    [nodeId: string]: Node
+  } = _.cloneDeep(unNodesHashJson);
 
   private sampleNodeMeshes: THREE.Mesh[] = [];
   private sampleEdgeMeshes: THREE.Line[] = [];
@@ -116,7 +126,7 @@ export default class Home extends Vue {
     const material = new THREE.MeshBasicMaterial();
     material.color.setHex(0xefefef);
 
-    _.forEach(this.sampleNodesHash, node => {
+    _.forEach(this.unNodesHash, node => {
       const nodeMesh = new THREE.Mesh(nodeGeometry, material);
       this.sampleNodeMeshes.push(nodeMesh);
       node.x = Math.random() * 20 - 10;
@@ -126,7 +136,7 @@ export default class Home extends Vue {
       this.scene.add(nodeMesh);
 
       const text = this._createTextLabel(container);
-      text.setHTML(node.id);
+      text.setHTML(node.label);
       text.setParent(nodeMesh);
       this.textlabels.push(text);
       container.appendChild(text.element);
@@ -137,8 +147,8 @@ export default class Home extends Vue {
       color: 0xffffff
     });
 
-    _.forEach(this.sampleNodesHash, node => {
-      _.forEach(node.neighbors, neighbor => {
+    _.forEach(this.unNodesHash, node => {
+      _.forEach(node.neighbors.total, (similarity, neighbor) => {
         if (node.id <= neighbor) {
           // edge를 추가한다.
           const edgeGeometry = new THREE.BufferGeometry();
@@ -175,20 +185,20 @@ export default class Home extends Vue {
     requestAnimationFrame(this.animate);
 
     // initialize net forces
-    _.forEach(this.sampleNodesHash, node => {
+    _.forEach(this.unNodesHash, node => {
       node.forceX = 0;
       node.forceY = 0;
     });
 
     // repulsion between all pairs
-    const sampleNodesHashKeys = Object.keys(this.sampleNodesHash);
+    const sampleNodesHashKeys = Object.keys(this.unNodesHash);
     // for (let i = 0; i < this.sampleNodes.length - 1; i++) {
     for (let i = 0; i < sampleNodesHashKeys.length - 1; i++) {
       const node1Id = sampleNodesHashKeys[i];
-      const node1 = this.sampleNodesHash[node1Id];
+      const node1 = this.unNodesHash[node1Id];
       for (let j = i + 1; j < sampleNodesHashKeys.length; j++) {
         const node2Id = sampleNodesHashKeys[j];
-        const node2 = this.sampleNodesHash[node2Id];
+        const node2 = this.unNodesHash[node2Id];
         const dx: number = node2.x - node1.x;
         const dy: number = node2.y - node1.y;
         if (dx !== 0 || dy !== 0) {
@@ -208,13 +218,13 @@ export default class Home extends Vue {
     // }
 
     // spring force between adjacent pairs
-
     for (let i = 0; i < sampleNodesHashKeys.length; i++) {
       const node1Id = sampleNodesHashKeys[i];
-      const node1 = this.sampleNodesHash[node1Id];
-      for (let j = 0; j < node1.neighbors.length; j++) {
-        const i2 = node1.neighbors[j];
-        const node2 = this.sampleNodesHash[i2];
+      const node1 = this.unNodesHash[node1Id];
+      // for (let j = 0; j < node1.neighbors.length; j++) {
+      _.forEach(node1.neighbors.total, (similarity, neighbor) => {
+        // const i2 = node1.neighbors[j];
+        const node2 = this.unNodesHash[neighbor];
 
         if (node1.id < node2.id) {
           const dx = node2.x - node1.x;
@@ -230,13 +240,15 @@ export default class Home extends Vue {
             node2.forceY -= fy;
           }
         }
-      }
+      });
+
+      // }
     }
 
     // update positions
     for (let i = 0; i < sampleNodesHashKeys.length; i++) {
       const nodeId = sampleNodesHashKeys[i];
-      const node = this.sampleNodesHash[nodeId];
+      const node = this.unNodesHash[nodeId];
       let dx = this.deltaT * node.forceX;
       let dy = this.deltaT * node.forceY;
 
@@ -260,15 +272,16 @@ export default class Home extends Vue {
     // tslint:disable-next-line: prefer-for-of
     for (let i = 0; i < sampleNodesHashKeys.length; i++) {
       const nodeId = sampleNodesHashKeys[i];
-      const node = this.sampleNodesHash[nodeId];
-      _.forEach(node.neighbors, neighbor => {
+      const node = this.unNodesHash[nodeId];
+      console.log('node', node);
+      _.forEach(node.neighbors.total, (similarity, neighbor) => {
         if (node.id <= neighbor) {
           // edge의 point의 위치를 조정한다.
           this.sampleEdgeMeshes[m].geometry.setFromPoints([
             new THREE.Vector3(node.x, node.y, 0),
             new THREE.Vector3(
-              this.sampleNodesHash[neighbor].x,
-              this.sampleNodesHash[neighbor].y,
+              this.unNodesHash[neighbor].x,
+              this.unNodesHash[neighbor].y,
               0
             )
           ]);

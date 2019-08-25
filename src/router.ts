@@ -24,7 +24,7 @@ export default new Router({
     {
       path: '/unnetwork-test',
       name: 'unnetwork-test',
-      component: () => import('./views/HashDataNetwork')
+      component: () => import('./views/UnNetworkTest')
     },
     {
       path: '/about',
