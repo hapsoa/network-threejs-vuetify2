@@ -8,6 +8,12 @@ import { Component, Vue } from 'vue-property-decorator';
 import * as THREE from 'three';
 import _ from 'lodash';
 
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+
+import { Line2 } from 'three/examples/jsm/lines/Line2.js';
+import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
+import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js';
+
 interface Node {
   id: string;
   label: string;
@@ -25,8 +31,11 @@ interface Node {
 })
 export default class Home extends Vue {
   private camera: any = null;
-  private scene: any = null;
+  private scene!: THREE.Scene;
   private renderer: any = null;
+
+  // camera controls
+  private controls!: OrbitControls;
 
   // sample nodes, edges
   private sampleNodesHash: { [nodeId: string]: Node } = {
@@ -81,6 +90,11 @@ export default class Home extends Vue {
   private sampleEdgeMeshes: THREE.Line[] = [];
   private textlabels: any[] = [];
 
+  private testEdge!: Line2;
+  private testGeometry!: LineGeometry;
+  private tick: number = 0;
+  private testEdgeGeometries: LineGeometry[] = [];
+
   // force-directed variables
   private restLength: number = 50;
   private kRepulsive: number = 6250;
@@ -102,6 +116,7 @@ export default class Home extends Vue {
       2000
     );
     this.camera.position.z = 150;
+    this.camera.up = new THREE.Vector3(0, 0, 1);
 
     // 화면인듯. 화면 생성
     this.scene = new THREE.Scene();
@@ -131,26 +146,43 @@ export default class Home extends Vue {
     });
 
     // edge 그리기
-    const lineMaterial = new THREE.LineBasicMaterial({
-      color: 0xffffff
-    });
 
     _.forEach(this.sampleNodesHash, node => {
       _.forEach(node.neighbors, neighbor => {
         if (node.id <= neighbor) {
           // edge를 추가한다.
-          const edgeGeometry = new THREE.BufferGeometry();
-          const positions = new Float32Array(2 * 3); // 3 vertices per point
-          edgeGeometry.addAttribute(
-            'position',
-            new THREE.BufferAttribute(positions, 3)
-          );
-          edgeGeometry.setDrawRange(0, 2);
+          // 잘되지만 lineWidth가 적용안되는 코드
+          // const edgeGeometry = new THREE.BufferGeometry();
+          // const positions = new Float32Array(2 * 3); // 3 vertices per point
+          // edgeGeometry.addAttribute(
+          //   'position',
+          //   new THREE.BufferAttribute(positions, 3)
+          // );
+          // edgeGeometry.setDrawRange(0, 2);
+          // const lineMaterial = new THREE.LineBasicMaterial({
+          //   color: 0xffffff,
+          //   linewidth: 1
+          // });
+          // // THREE.line
+          // const edgeMesh = new THREE.Line(edgeGeometry, lineMaterial);
+          // this.sampleEdgeMeshes.push(edgeMesh);
+          // // scene에 mesh를 추가한다.
+          // this.scene.add(edgeMesh);
 
-          const edgeMesh = new THREE.Line(edgeGeometry, lineMaterial);
-          this.sampleEdgeMeshes.push(edgeMesh);
-          // scene에 mesh를 추가한다.
-          this.scene.add(edgeMesh);
+          // Line2 ( LineGeometry, LineMaterial )
+          const geometry = new LineGeometry();
+          const lineMaterial = new LineMaterial({
+            color: 0xffffff,
+            linewidth: 7
+          });
+          lineMaterial.resolution.set(
+            container.clientWidth,
+            container.clientHeight
+          );
+
+          const line = new Line2(geometry, lineMaterial);
+          this.testEdgeGeometries.push(geometry);
+          this.scene.add(line);
         }
       });
     });
@@ -163,6 +195,11 @@ export default class Home extends Vue {
     // renderer의 크기를 설정한다. 화면 크기를 설정한다고 볼 수 있겠다.
     this.renderer.setSize(container.clientWidth, container.clientHeight);
     container.appendChild(this.renderer.domElement);
+
+    // camera controls
+    this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+    this.controls.update();
+    // this.controls.enableRotate = false;
   }
 
   /**
@@ -250,35 +287,66 @@ export default class Home extends Vue {
       node.y += dy;
       this.sampleNodeMeshes[i].position.x = node.x;
       this.sampleNodeMeshes[i].position.y = node.y;
-
-      // 각 edge마다 point를 바꿔줘야 한다.
     }
 
+    // 각 edge마다 point를 바꿔줘야 한다.
+    // let m = 0;
+    // for (let i = 0; i < sampleNodesHashKeys.length; i++) {
+    //   const nodeId = sampleNodesHashKeys[i];
+    //   const node = this.sampleNodesHash[nodeId];
+    //   _.forEach(node.neighbors, neighbor => {
+    //     if (node.id <= neighbor) {
+    //       // edge의 point의 위치를 조정한다.
+    //       this.sampleEdgeMeshes[m].geometry.setFromPoints([
+    //         new THREE.Vector3(node.x, node.y, 0),
+    //         new THREE.Vector3(
+    //           this.sampleNodesHash[neighbor].x,
+    //           this.sampleNodesHash[neighbor].y,
+    //           0
+    //         )
+    //       ]);
+    //       m++;
+    //     }
+    //   });
+    // }
     let m = 0;
-    // tslint:disable-next-line: prefer-for-of
     for (let i = 0; i < sampleNodesHashKeys.length; i++) {
       const nodeId = sampleNodesHashKeys[i];
       const node = this.sampleNodesHash[nodeId];
       _.forEach(node.neighbors, neighbor => {
         if (node.id <= neighbor) {
           // edge의 point의 위치를 조정한다.
-          this.sampleEdgeMeshes[m].geometry.setFromPoints([
-            new THREE.Vector3(node.x, node.y, 0),
-            new THREE.Vector3(
-              this.sampleNodesHash[neighbor].x,
-              this.sampleNodesHash[neighbor].y,
-              0
-            )
+          // this.sampleEdgeMeshes[m].geometry.setFromPoints([
+          //   new THREE.Vector3(node.x, node.y, 0),
+          //   new THREE.Vector3(
+          //     this.sampleNodesHash[neighbor].x,
+          //     this.sampleNodesHash[neighbor].y,
+          //     0
+          //   )
+          // ]);
+          this.testEdgeGeometries[m].setPositions([
+            node.x,
+            node.y,
+            0,
+            this.sampleNodesHash[neighbor].x,
+            this.sampleNodesHash[neighbor].y,
+            0
           ]);
           m++;
         }
       });
     }
 
-    // tslint:disable-next-line: prefer-for-of
+    // this.testGeometry.setPositions([0, 0, 0, -this.tick / 2, this.tick, 0]);
+    // this.tick++;
+
+    // 노드들의 text들의 위치를 업데이트한다.
     for (let i = 0; i < this.textlabels.length; i++) {
       this.textlabels[i].updatePosition();
     }
+
+    // orbitControl을 업데이트한다.
+    this.controls.update();
 
     // renderer가 scene과 camera를 가지고 그린다.
     this.renderer.render(this.scene, this.camera);

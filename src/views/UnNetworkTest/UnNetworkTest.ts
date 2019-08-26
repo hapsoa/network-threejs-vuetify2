@@ -8,7 +8,13 @@ import { Component, Vue } from 'vue-property-decorator';
 import * as THREE from 'three';
 import _ from 'lodash';
 
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import { Line2 } from 'three/examples/jsm/lines/Line2.js';
+import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
+import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js';
+
 import unNodesHashJson from '@/refiningData/result-directory/refinedData.json';
+// import unNodesHashJson from '@/refiningData/result-directory/allRefinedData.json';
 
 interface CountryCountHash {
   [country: string]: number;
@@ -26,6 +32,9 @@ interface Node {
   forceY: number;
   neighbors: CountryCountHashPerKey;
 }
+// interface YearWeight {
+// [coun];
+// }
 
 @Component({
   components: {
@@ -33,65 +42,23 @@ interface Node {
   }
 })
 export default class Home extends Vue {
-  private camera: any = null;
+  private camera!: THREE.PerspectiveCamera;
   private scene: any = null;
   private renderer: any = null;
+  private tick: number = 0;
 
-  // sample nodes, edges
-  // private sampleNodesHash: { [nodeId: string]: Node } = {
-  //   1: {
-  //     id: '1',
-  //     label: 'Allemand Pere (Marc Allemand)',
-  //     x: 0,
-  //     y: 0,
-  //     forceX: 0,
-  //     forceY: 0,
-  //     neighbors: ['2', '3', '4', '5']
-  //   },
-  //   2: {
-  //     id: '2',
-  //     label: 'Etienne Allemand',
-  //     x: 0,
-  //     y: 0,
-  //     forceX: 0,
-  //     forceY: 0,
-  //     neighbors: ['1', '3', '4']
-  //   },
-  //   3: {
-  //     id: '3',
-  //     label: 'Marie Giraud',
-  //     x: 0,
-  //     y: 0,
-  //     forceX: 0,
-  //     forceY: 0,
-  //     neighbors: []
-  //   },
-  //   4: {
-  //     id: '4',
-  //     label: 'Elizabeth Glaumont',
-  //     x: 0,
-  //     y: 0,
-  //     forceX: 0,
-  //     forceY: 0,
-  //     neighbors: ['1', '3']
-  //   },
-  //   5: {
-  //     id: '5',
-  //     label: 'Louis Merceron',
-  //     x: 0,
-  //     y: 0,
-  //     forceX: 0,
-  //     forceY: 0,
-  //     neighbors: ['1']
-  //   }
-  // };
+  // camera controls
+  private controls!: OrbitControls;
+
   private unNodesHash: {
-    [nodeId: string]: Node
+    [nodeId: string]: Node;
   } = _.cloneDeep(unNodesHashJson);
 
   private sampleNodeMeshes: THREE.Mesh[] = [];
-  private sampleEdgeMeshes: THREE.Line[] = [];
+  private edgeGeometries: LineGeometry[] = [];
   private textlabels: any[] = [];
+
+  private yearMean: number = 0;
 
   // force-directed variables
   private restLength: number = 50;
@@ -115,6 +82,8 @@ export default class Home extends Vue {
     );
     this.camera.position.z = 150;
 
+    this.camera.up = new THREE.Vector3(0, 0, 1);
+
     // 화면인듯. 화면 생성
     this.scene = new THREE.Scene();
 
@@ -129,9 +98,9 @@ export default class Home extends Vue {
     _.forEach(this.unNodesHash, node => {
       const nodeMesh = new THREE.Mesh(nodeGeometry, material);
       this.sampleNodeMeshes.push(nodeMesh);
-      node.x = Math.random() * 20 - 10;
+      node.x = Math.random() * 200 - 100;
       nodeMesh.position.x = node.x;
-      node.y = Math.random() * 20 - 10;
+      node.y = Math.random() * 200 - 100;
       nodeMesh.position.y = node.y;
       this.scene.add(nodeMesh);
 
@@ -143,26 +112,23 @@ export default class Home extends Vue {
     });
 
     // edge 그리기
-    const lineMaterial = new THREE.LineBasicMaterial({
-      color: 0xffffff
-    });
-
     _.forEach(this.unNodesHash, node => {
       _.forEach(node.neighbors.total, (similarity, neighbor) => {
         if (node.id <= neighbor) {
           // edge를 추가한다.
-          const edgeGeometry = new THREE.BufferGeometry();
-          const positions = new Float32Array(2 * 3); // 3 vertices per point
-          edgeGeometry.addAttribute(
-            'position',
-            new THREE.BufferAttribute(positions, 3)
+          const geometry = new LineGeometry();
+          const lineMaterial = new LineMaterial({
+            color: 0xffffff,
+            linewidth: similarity
+          });
+          lineMaterial.resolution.set(
+            container.clientWidth,
+            container.clientHeight
           );
-          edgeGeometry.setDrawRange(0, 2);
 
-          const edgeMesh = new THREE.Line(edgeGeometry, lineMaterial);
-          this.sampleEdgeMeshes.push(edgeMesh);
-          // scene에 mesh를 추가한다.
-          this.scene.add(edgeMesh);
+          const line = new Line2(geometry, lineMaterial);
+          this.edgeGeometries.push(geometry);
+          this.scene.add(line);
         }
       });
     });
@@ -175,6 +141,10 @@ export default class Home extends Vue {
     // renderer의 크기를 설정한다. 화면 크기를 설정한다고 볼 수 있겠다.
     this.renderer.setSize(container.clientWidth, container.clientHeight);
     container.appendChild(this.renderer.domElement);
+
+    // camera controls
+    this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+    this.controls.enableRotate = false;
   }
 
   /**
@@ -183,117 +153,111 @@ export default class Home extends Vue {
   private animate() {
     // 다음 프레임때 animate()함수를 실행시키는 함수인듯
     requestAnimationFrame(this.animate);
-
-    // initialize net forces
-    _.forEach(this.unNodesHash, node => {
-      node.forceX = 0;
-      node.forceY = 0;
-    });
-
-    // repulsion between all pairs
-    const sampleNodesHashKeys = Object.keys(this.unNodesHash);
-    // for (let i = 0; i < this.sampleNodes.length - 1; i++) {
-    for (let i = 0; i < sampleNodesHashKeys.length - 1; i++) {
-      const node1Id = sampleNodesHashKeys[i];
-      const node1 = this.unNodesHash[node1Id];
-      for (let j = i + 1; j < sampleNodesHashKeys.length; j++) {
-        const node2Id = sampleNodesHashKeys[j];
-        const node2 = this.unNodesHash[node2Id];
-        const dx: number = node2.x - node1.x;
-        const dy: number = node2.y - node1.y;
-        if (dx !== 0 || dy !== 0) {
-          const distanceSquared: number = dx * dx + dy * dy;
-          const distance: number = Math.sqrt(distanceSquared);
-          const force: number = this.kRepulsive / distanceSquared;
-          const fx: number = (force * dx) / distance;
-          const fy: number = (force * dy) / distance;
-          node1.forceX -= fx;
-          node1.forceY -= fy;
-          node2.forceX += fx;
-          node2.forceY += fy;
-        }
-      }
-    }
-
-    // }
-
-    // spring force between adjacent pairs
-    for (let i = 0; i < sampleNodesHashKeys.length; i++) {
-      const node1Id = sampleNodesHashKeys[i];
-      const node1 = this.unNodesHash[node1Id];
-      // for (let j = 0; j < node1.neighbors.length; j++) {
-      _.forEach(node1.neighbors.total, (similarity, neighbor) => {
-        // const i2 = node1.neighbors[j];
-        const node2 = this.unNodesHash[neighbor];
-
-        if (node1.id < node2.id) {
-          const dx = node2.x - node1.x;
-          const dy = node2.y - node1.y;
-          if (dx !== 0 || dy !== 0) {
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            const force = this.kSpring * (distance - this.restLength);
-            const fx = (force * dx) / distance;
-            const fy = (force * dy) / distance;
-            node1.forceX += fx;
-            node1.forceY += fy;
-            node2.forceX -= fx;
-            node2.forceY -= fy;
-          }
-        }
+    // console.log('tick', this.tick);
+    if (this.tick < 20) {
+      // initialize net forces
+      _.forEach(this.unNodesHash, node => {
+        node.forceX = 0;
+        node.forceY = 0;
       });
 
-      // }
-    }
-
-    // update positions
-    for (let i = 0; i < sampleNodesHashKeys.length; i++) {
-      const nodeId = sampleNodesHashKeys[i];
-      const node = this.unNodesHash[nodeId];
-      let dx = this.deltaT * node.forceX;
-      let dy = this.deltaT * node.forceY;
-
-      const displacementSquared = dx * dx + dy * dy;
-      if (displacementSquared > this.MAX_DISPLACEMENT_SQUARED) {
-        const s = Math.sqrt(
-          this.MAX_DISPLACEMENT_SQUARED / displacementSquared
-        );
-        dx *= s;
-        dy *= s;
+      // repulsion between all pairs
+      const nodesHashKeys = Object.keys(this.unNodesHash);
+      for (let i = 0; i < nodesHashKeys.length - 1; i++) {
+        const node1Id = nodesHashKeys[i];
+        const node1 = this.unNodesHash[node1Id];
+        for (let j = i + 1; j < nodesHashKeys.length; j++) {
+          const node2Id = nodesHashKeys[j];
+          const node2 = this.unNodesHash[node2Id];
+          const dx: number = node2.x - node1.x;
+          const dy: number = node2.y - node1.y;
+          if (dx !== 0 || dy !== 0) {
+            const distanceSquared: number = dx * dx + dy * dy;
+            const distance: number = Math.sqrt(distanceSquared);
+            const force: number = this.kRepulsive / distanceSquared;
+            const fx: number = (force * dx) / distance;
+            const fy: number = (force * dy) / distance;
+            node1.forceX -= fx;
+            node1.forceY -= fy;
+            node2.forceX += fx;
+            node2.forceY += fy;
+          }
+        }
       }
-      node.x += dx;
-      node.y += dy;
-      this.sampleNodeMeshes[i].position.x = node.x;
-      this.sampleNodeMeshes[i].position.y = node.y;
+
+      // spring force between adjacent pairs
+      for (let i = 0; i < nodesHashKeys.length; i++) {
+        const node1Id = nodesHashKeys[i];
+        const node1 = this.unNodesHash[node1Id];
+        _.forEach(node1.neighbors.total, (similarity, neighbor) => {
+          const node2 = this.unNodesHash[neighbor];
+
+          if (node1.id < node2.id) {
+            const dx = node2.x - node1.x;
+            const dy = node2.y - node1.y;
+            if (dx !== 0 || dy !== 0) {
+              const distance = Math.sqrt(dx * dx + dy * dy);
+              const force = this.kSpring * (distance - this.restLength);
+              const fx = (force * dx) / distance;
+              const fy = (force * dy) / distance;
+              node1.forceX += fx;
+              node1.forceY += fy;
+              node2.forceX -= fx;
+              node2.forceY -= fy;
+            }
+          }
+        });
+      }
+
+      // update positions
+      for (let i = 0; i < nodesHashKeys.length; i++) {
+        const nodeId = nodesHashKeys[i];
+        const node = this.unNodesHash[nodeId];
+        let dx = this.deltaT * node.forceX;
+        let dy = this.deltaT * node.forceY;
+
+        const displacementSquared = dx * dx + dy * dy;
+        if (displacementSquared > this.MAX_DISPLACEMENT_SQUARED) {
+          const s = Math.sqrt(
+            this.MAX_DISPLACEMENT_SQUARED / displacementSquared
+          );
+          dx *= s;
+          dy *= s;
+        }
+        node.x += dx;
+        node.y += dy;
+        this.sampleNodeMeshes[i].position.x = node.x;
+        this.sampleNodeMeshes[i].position.y = node.y;
+      }
 
       // 각 edge마다 point를 바꿔줘야 한다.
-    }
-
-    let m = 0;
-    // tslint:disable-next-line: prefer-for-of
-    for (let i = 0; i < sampleNodesHashKeys.length; i++) {
-      const nodeId = sampleNodesHashKeys[i];
-      const node = this.unNodesHash[nodeId];
-      console.log('node', node);
-      _.forEach(node.neighbors.total, (similarity, neighbor) => {
-        if (node.id <= neighbor) {
-          // edge의 point의 위치를 조정한다.
-          this.sampleEdgeMeshes[m].geometry.setFromPoints([
-            new THREE.Vector3(node.x, node.y, 0),
-            new THREE.Vector3(
+      let m = 0;
+      for (let i = 0; i < nodesHashKeys.length; i++) {
+        const nodeId = nodesHashKeys[i];
+        const node = this.unNodesHash[nodeId];
+        _.forEach(node.neighbors.total, (similarity, neighbor) => {
+          if (node.id <= neighbor) {
+            // edge의 point의 위치를 조정한다.
+            this.edgeGeometries[m].setPositions([
+              node.x,
+              node.y,
+              0,
               this.unNodesHash[neighbor].x,
               this.unNodesHash[neighbor].y,
               0
-            )
-          ]);
-          m++;
-        }
-      });
+            ]);
+            m++;
+          }
+        });
+      }
     }
 
-    // tslint:disable-next-line: prefer-for-of
+    // 노드에 text label의 위치를 업데이트 한다.
     for (let i = 0; i < this.textlabels.length; i++) {
       this.textlabels[i].updatePosition();
     }
+
+    this.tick++;
 
     // renderer가 scene과 camera를 가지고 그린다.
     this.renderer.render(this.scene, this.camera);

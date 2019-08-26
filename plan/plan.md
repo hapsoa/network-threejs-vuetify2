@@ -51,6 +51,20 @@ node:
       JP: 2.8,
       CHN: 0.5
     }
+    total: {
+      KOR: {
+        similarity: 3.6,
+        yearMean: -1 ~ 1 사이
+
+        yearMean이 음수면, rgb(255 * v, 0, 0)
+        yearMean이 양수면, rgb(0, 0, 255 * v)
+        연도에 대한 가중치를 준다.
+        평균 : 1950년
+        총 similarity는 3.6
+        ((1900 - 1950) * 1.2 + (2000 - 1950) * 2.4)) / (50 * 3.6)  => 좀더 파란색.
+
+      }
+    }
   }
 }
 유사성이 가장 높은 2개로 edge가 만들어 진다.
@@ -65,6 +79,12 @@ super-graph에서는 각 연도별 유사성 높은 2개를 가중치한 것들�
 -total은 각 연도마다의 값을 모두 더한 값으로 하자.
 -total로 edge를 형성한다.
 -weight를 준다.
+weight에 따라 굵기가 조절된다.
+각 edge가 어느 similarity에 포함되어 있는지 알고 싶다.
+연도가 어느정도인지 알고 싶다.
+edge마다 similarity가 있고,
+
+yearWeight
 
 -html 레이아웃을 잡는다.
 
