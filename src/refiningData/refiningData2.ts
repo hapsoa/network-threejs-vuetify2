@@ -58,9 +58,14 @@ interface CountryCountHashPerKey {
 
 const _: LoDashStatic = require('lodash');
 const fs = require('fs');
+// const unJsonData: UnDatum[] = require('./data-directory/UNdata.json');
 const unJsonData: UnDatum[] = require('./data-directory/2year-UNdata.json');
 
+// const jsonFileResultPath =
+//   'src/refiningData/result-directory/allRefinedData.json';
 const jsonFileResultPath = 'src/refiningData/result-directory/refinedData.json';
+const yearWeightResultPath =
+  'src/refiningData/yearWeightHashDirectory/yearWeightHash.json';
 
 console.log('refiningData.js start');
 initiate(unJsonData);
@@ -119,11 +124,11 @@ function initiate(unData: UnDatum[]) {
   // console.log('neighboredNodesHash', neighboredNodesHash);
 
   // yearMean을 구한다.
-  const yearMeanHash: {
-    [country: string]: {
-      [otherCountry: string]: number;
-    };
-  } = {};
+  const yearWeightHash: CountryByCountryCountHash = makeYearWeightHash({
+    unData,
+    nodesHash: neighboredNodesHash,
+    numOfRcidsPerYearHash
+  });
 
   // 파일을 쓴다.
   fs.writeFile(jsonFileResultPath, JSON.stringify(neighboredNodesHash), err => {
@@ -131,9 +136,16 @@ function initiate(unData: UnDatum[]) {
       console.error(err);
       return;
     }
-    console.log('File has been created');
+    console.log('File(jsonFileResultPath) has been created');
   });
-  // yearMeanHash 데이터도 파일을 쓴다.
+  // yearWeightHash 데이터도 파일을 쓴다.
+  fs.writeFile(yearWeightResultPath, JSON.stringify(yearWeightHash), err => {
+    if (err) {
+      console.error(err);
+      return;
+    }
+    console.log('File(yearWeightResultPath) has been created');
+  });
 }
 
 /**
@@ -233,7 +245,11 @@ function checkSimilarVoteForRcid(
   );
   _.forEach(similarityForRcid, (otherCountriesHash, country) => {
     _.forEach(otherCountriesHash, (otherCountrySimilarity, otherCountry) => {
-      if (votesHash[country] === votesHash[otherCountry]) {
+      if (
+        votesHash[country] === votesHash[otherCountry] &&
+        votesHash[country] !== 8 &&
+        votesHash[country] !== 9
+      ) {
         otherCountriesHash[otherCountry] += 1;
       } else {
         //
@@ -319,7 +335,6 @@ function makeSimilaritiesHashPerYear(o: {
     // KOR: {
     //   USA: 0.6
     // }
-    // console.log('smiliaritiesHashForYear', smiliaritiesHashForYear);
 
     // {
     //   KOR: {
@@ -444,39 +459,50 @@ function makeNeighBorsForYear(
   return neighbors;
 }
 
-//
-//
-//
-// const refinedData = {};
+/**
+ * -1 ~ 1 사이. similarity의 시간성이 과거에 혹은 미래에 가중이 있는지 알려주는 수치를
+ * 만드는 함수이다.
+ * @param unData \
+ */
+function makeYearWeightHash(o: {
+  unData: UnDatum[];
+  nodesHash: NodesHash;
+  numOfRcidsPerYearHash: NumOfRcidsPerYearHash;
+}): CountryByCountryCountHash {
+  const yearMeanHash: CountryByCountryCountHash = makeBasicCountryProperty(
+    o.unData
+  );
 
-// _.forEach(UNdata, datum => {
-//   // rcid가 사건id이다.
-//   // 각 사건마다 나라별 similarity가 계산이 가능하다.
-//   // 묶는건 연도별 기준이기 때문에 연도별로 합칠 수 있어야 한다.
-//   if (_.has(refinedData, datum.year)) {
-//     refinedData[datum.year];
-//     // 연도별로
-//   }
-// });
+  const unYears: string[] = Object.keys(o.numOfRcidsPerYearHash);
+  // 오름차순
+  unYears.sort();
 
-// const dataObject = _(UNdata)
-//   .map(data => {
-//     // 연도 단위로 사건을 나눈다.
-//     return {
-//       rcid: data.rcid,
-//       Country: data.Country,
-//       Countryname: data.Countryname,
-//       date: data.date
-//     };
-//   })
-//   .keyBy(data => data.Country)
-//   .value();
+  const minYear: number = Number(unYears[0]);
+  const maxYear: number = Number(unYears[unYears.length - 1]);
 
-// // 파일을 쓴다.
-// fs.writeFile(jsonFileResultPath, JSON.stringify(dataObject), err => {
-//   if (err) {
-//     console.error(err);
-//     return;
-//   }
-//   console.log('File has been created');
-// });
+  // 최근 연도 ~ 제일 과거 연도 사이의 가운데 연도
+  const middleYear: number = minYear + (maxYear - minYear) / 2;
+  const halfOfMinToMiddleYear: number = middleYear - minYear;
+  // console.log('middleYear', middleYear);
+
+  _.forEach(o.nodesHash, (node, nodeId) => {
+    _.forEach(node.neighbors.total, (nodeTotalSimilarity, otherCountry) => {
+      // 공식을 넣는다.
+      let timeWeight: number = 0;
+      _.forEach(node.neighbors, (countryObject, year) => {
+        if (year !== 'total') {
+          if (_.has(countryObject, otherCountry)) {
+            timeWeight +=
+              (Number(year) - middleYear) * countryObject[otherCountry];
+          }
+        }
+      });
+      timeWeight /= halfOfMinToMiddleYear * nodeTotalSimilarity;
+      // console.log('timeWeight!', timeWeight);
+      yearMeanHash[nodeId][otherCountry] = timeWeight;
+    });
+  });
+
+  // console.log('yearMeanHash', yearMeanHash);
+  return yearMeanHash;
+}

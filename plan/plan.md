@@ -54,7 +54,7 @@ node:
     total: {
       KOR: {
         similarity: 3.6,
-        yearMean: -1 ~ 1 사이
+        yearMean: -1 ~ 1 사이. similarity의 시간성이 과거에 혹은 미래에 가중이 있는지 알려주는 수치
 
         yearMean이 음수면, rgb(255 * v, 0, 0)
         yearMean이 양수면, rgb(0, 0, 255 * v)
@@ -63,6 +63,7 @@ node:
         총 similarity는 3.6
         ((1900 - 1950) * 1.2 + (2000 - 1950) * 2.4)) / (50 * 3.6)  => 좀더 파란색.
 
+        각 노드별로 total neighbors의 각 neighbor마다 yearMean값이 필요하다.
       }
     }
   }
@@ -109,24 +110,31 @@ edge:
 
 
 
-
-
 ```
 
 # 파일 실행방법(node)
 
 ```
 <대용량 json 읽어 올때 js 실행하는 방법>
-node --max-old-space-size=8192 --stack-size=1968 src/refiningData/refiningData2.ts
+node --max-old-space-size=32768 --stack-size=1968 src/refiningData/refiningData2.ts
 
---max-old-space-size를 8192 X 4 하면 실행이 된다.
+--max-old-space-size를 8192  하면 실행이 된다.
 ```
 
 # 메모
 
 ```
+-Geometry를 하나로 바꿔서 활용해야 한다.
+-force-directed 알고리즘이 계속 뭔가 더하는게 있는지 체크해야 한다. (점점 느려지기 때문?)
 
 
+문제점이 있다.
+yearWeightHash가 서로 다르다. 다르면 안되는데,
+다를 수 있다.
+
+-forced 알고리즘을 확인한다.
+-네트워크의 색상을 준다.
+-네트워크의 weight를 준다.
 
 
 ```

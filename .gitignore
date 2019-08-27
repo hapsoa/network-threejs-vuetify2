@@ -23,3 +23,4 @@ yarn-error.log*
 # 대용량 데이터는 추가 안한다
 src/refiningData/data-directory/
 src/refiningData/result-directory/
+src/refiningData/yearWeightHashDirectory/

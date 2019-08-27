@@ -15,6 +15,7 @@ import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js';
 
 import unNodesHashJson from '@/refiningData/result-directory/refinedData.json';
 // import unNodesHashJson from '@/refiningData/result-directory/allRefinedData.json';
+import yearWeightHashJson from '@/refiningData/yearWeightHashDirectory/yearWeightHash.json';
 
 interface CountryCountHash {
   [country: string]: number;
@@ -23,6 +24,10 @@ interface CountryCountHashPerKey {
   // rcid, year(total)
   [key: string]: CountryCountHash;
 }
+interface CountryByCountryCountHash {
+  [country: string]: CountryCountHash;
+}
+
 interface Node {
   id: string; // Country
   label: string; // Countryname
@@ -53,12 +58,13 @@ export default class Home extends Vue {
   private unNodesHash: {
     [nodeId: string]: Node;
   } = _.cloneDeep(unNodesHashJson);
+  private yearWeightHash: CountryByCountryCountHash = _.cloneDeep(
+    yearWeightHashJson
+  );
 
   private sampleNodeMeshes: THREE.Mesh[] = [];
   private edgeGeometries: LineGeometry[] = [];
   private textlabels: any[] = [];
-
-  private yearMean: number = 0;
 
   // force-directed variables
   private restLength: number = 50;
