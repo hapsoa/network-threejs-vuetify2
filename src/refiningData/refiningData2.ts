@@ -26,16 +26,6 @@ interface Node {
   neighbors: CountryCountHashPerKey;
 }
 
-// interface Node {
-//   id: string;
-//   label: string;
-//   x: number;
-//   y: number;
-//   forceX: number;
-//   forceY: number;
-//   neighbors: string[];
-// }
-
 interface NodesHash {
   [nodeName: string]: Node;
 }
@@ -122,11 +112,18 @@ function initiate(unData: UnDatum[]) {
   // console.log('similaritiesHashPerYear', similaritiesHashPerYear);
 
   // 각 노드별로 neighbors를 구한다.
-  const neighboredNodesHash = makeNeighborsAll({
+  const neighboredNodesHash: NodesHash = makeNeighborsAll({
     nodesHash,
     similaritiesHashPerYear
   });
   // console.log('neighboredNodesHash', neighboredNodesHash);
+
+  // yearMean을 구한다.
+  const yearMeanHash: {
+    [country: string]: {
+      [otherCountry: string]: number;
+    };
+  } = {};
 
   // 파일을 쓴다.
   fs.writeFile(jsonFileResultPath, JSON.stringify(neighboredNodesHash), err => {
@@ -136,6 +133,7 @@ function initiate(unData: UnDatum[]) {
     }
     console.log('File has been created');
   });
+  // yearMeanHash 데이터도 파일을 쓴다.
 }
 
 /**
@@ -396,7 +394,9 @@ function makeNeighborsAll(o: {
  * 연도별 neighbors를 가지고 total property를 만드는 함수이다.
  * @param neighbors : 연도별로 highest similarity를 가진 다른 두 나라의 similarity를 가진 객체
  */
-function makeTotalNeighbor(neighbors: CountryCountHashPerKey): CountryCountHash {
+function makeTotalNeighbor(
+  neighbors: CountryCountHashPerKey
+): CountryCountHash {
   const totalNeighbor: CountryCountHash = {};
   _.forEach(neighbors, (otherCountryObject, year) => {
     _.forEach(otherCountryObject, (similarity, otherCountry) => {

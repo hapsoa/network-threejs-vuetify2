@@ -113,7 +113,20 @@ edge:
 
 ```
 
+# 파일 실행방법(node)
+
 ```
--대용량 json 읽어 올때 js 실행하는 방법
+<대용량 json 읽어 올때 js 실행하는 방법>
 node --max-old-space-size=8192 --stack-size=1968 src/refiningData/refiningData2.ts
+
+--max-old-space-size를 8192 X 4 하면 실행이 된다.
+```
+
+# 메모
+
+```
+
+
+
+
 ```
