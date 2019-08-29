@@ -26,6 +26,12 @@ export default new Router({
       name: 'unnetwork-test',
       component: () => import('./views/UnNetworkTest')
     },
+    // un data로 force-directed graph 테스트. BufferGeometry 활용한 것
+    {
+      path: '/un-buffer-geometry-test',
+      name: 'un-buffer-geometry-test',
+      component: () => import('./views/UnBufferGeometryTest')
+    },
     {
       path: '/about',
       name: 'about',

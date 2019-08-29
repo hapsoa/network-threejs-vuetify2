@@ -37,9 +37,6 @@ interface Node {
   forceY: number;
   neighbors: CountryCountHashPerKey;
 }
-// interface YearWeight {
-// [coun];
-// }
 
 @Component({
   components: {
@@ -64,6 +61,7 @@ export default class Home extends Vue {
 
   private sampleNodeMeshes: THREE.Mesh[] = [];
   private edgeGeometries: LineGeometry[] = [];
+  private edgeMeshes: Line2[] = [];
   private textlabels: any[] = [];
 
   // force-directed variables
@@ -79,7 +77,7 @@ export default class Home extends Vue {
   private init() {
     const container = document.getElementById('container') as HTMLElement;
 
-    // 카메라 생성 (fov: 작아질수록 가까이, aspect: 화면비율, near: 어느시점부터 보이기, far: 어디까지 보이기)
+    // 카메라 생성 (fov: 시야각. 시야가 좁아지면 확대되어 보임, aspect: 종횡비, near: 어느시점부터 보이기, far: 어디까지 보이기)
     this.camera = new THREE.PerspectiveCamera(
       50,
       container.clientWidth / container.clientHeight,
@@ -87,7 +85,7 @@ export default class Home extends Vue {
       2000
     );
     this.camera.position.z = 150;
-
+    // orbitControl 상하 이동을 변경하기위해 카메라 up 벡터를 조정한다.
     this.camera.up = new THREE.Vector3(0, 0, 1);
 
     // 화면인듯. 화면 생성
@@ -121,10 +119,19 @@ export default class Home extends Vue {
     _.forEach(this.unNodesHash, node => {
       _.forEach(node.neighbors.total, (similarity, neighbor) => {
         if (node.id <= neighbor) {
+          let color: number = 0x000000;
+          const yearWeight = this.yearWeightHash[node.id][neighbor];
+          if (yearWeight > 0) {
+            color = 0xffff00 + 0xff * yearWeight;
+          } else if (yearWeight < 0) {
+            color = 0x00ffff + 0xff * yearWeight;
+          } else {
+            color = 0x00ff00;
+          }
           // edge를 추가한다.
           const geometry = new LineGeometry();
           const lineMaterial = new LineMaterial({
-            color: 0xffffff,
+            color,
             linewidth: similarity
           });
           lineMaterial.resolution.set(
@@ -134,6 +141,8 @@ export default class Home extends Vue {
 
           const line = new Line2(geometry, lineMaterial);
           this.edgeGeometries.push(geometry);
+          this.edgeMeshes.push(line);
+
           this.scene.add(line);
         }
       });
@@ -160,7 +169,7 @@ export default class Home extends Vue {
     // 다음 프레임때 animate()함수를 실행시키는 함수인듯
     requestAnimationFrame(this.animate);
     // console.log('tick', this.tick);
-    if (this.tick < 20) {
+    if (this.tick < 100) {
       // initialize net forces
       _.forEach(this.unNodesHash, node => {
         node.forceX = 0;
@@ -252,6 +261,17 @@ export default class Home extends Vue {
               this.unNodesHash[neighbor].y,
               0
             ]);
+            // this.edgeMeshes[m].geometry = this.edgeMeshes[
+            //   m
+            // ].geometry.setFromPoints([
+            //   new THREE.Vector3(node.x, node.y, 0),
+            //   new THREE.Vector3(
+            //     this.unNodesHash[neighbor].x,
+            //     this.unNodesHash[neighbor].y,
+            //     0
+            //   )
+            // ]);
+
             m++;
           }
         });

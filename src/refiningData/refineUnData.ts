@@ -326,7 +326,6 @@ function makeSimilaritiesHashPerYear(o: {
     // 해당 사건의 연도
     const rcidYear = o.rcidsHash[rcid].year;
     if (!_.has(similaritiesHashPerYear, rcidYear)) {
-      // similaritiesHashPerYear[rcidYear] = {};
       similaritiesHashPerYear[rcidYear] = makeBasicCountryProperty(o.unData);
     }
 
@@ -350,7 +349,6 @@ function makeSimilaritiesHashPerYear(o: {
       });
     });
   });
-  // console.log('similaritiesHashPerYear', similaritiesHashPerYear);
 
   // 연도별 사건의 수만큼 나눈다
   _.forEach(similaritiesHashPerYear, (similaritiesHash, year) => {
@@ -421,7 +419,6 @@ function makeTotalNeighbor(
       totalNeighbor[otherCountry] += similarity;
     });
   });
-  // console.log('totalNeighbor', totalNeighbor);
   return totalNeighbor;
 }
 
@@ -435,7 +432,7 @@ function makeNeighBorsForYear(
   const neighbors: CountryCountHash = {};
   const similarityPassScore: number = 0.5;
 
-  // 가장 높은 노드 2개로 할까?
+  // TODO 가장 높은 노드 2개로 할까?
   const limitCount: number = 2;
   let currentCount: number = 0;
   _.forEach(similaritiesHash, (similarity, otherCountry) => {
