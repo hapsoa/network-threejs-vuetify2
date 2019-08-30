@@ -310,12 +310,15 @@ export default class Home extends Vue {
       element: div,
       parent: false,
       position: new THREE.Vector3(0, 0, 0),
-      setHTML(html) {
+      // label을 지정하는 함수
+      setHTML(html: string) {
         this.element.innerHTML = html;
       },
+      // mesh단위로 parent를 붙이는듯
       setParent(threejsobj) {
         this.parent = threejsobj;
       },
+      // 매 tick마다 해당 text의 위치를 업데이트한다.
       updatePosition() {
         if (parent) {
           // @ts-ignore

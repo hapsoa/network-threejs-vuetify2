@@ -58,14 +58,17 @@ interface CountryCountHashPerKey {
 
 const _: LoDashStatic = require('lodash');
 const fs = require('fs');
-// const unJsonData: UnDatum[] = require('./data-directory/UNdata.json');
-const unJsonData: UnDatum[] = require('./data-directory/2year-UNdata.json');
 
-// const jsonFileResultPath =
-//   'src/refiningData/result-directory/allRefinedData.json';
-const jsonFileResultPath = 'src/refiningData/result-directory/refinedData.json';
+const unJsonData: UnDatum[] = require('./data-directory/UNdata.json');
+const jsonFileResultPath =
+  'src/refiningData/result-directory/refinedUnData.json';
 const yearWeightResultPath =
-  'src/refiningData/yearWeightHashDirectory/yearWeightHash.json';
+  'src/refiningData/yearWeightHashDirectory/unYearWeightHash.json';
+// const unJsonData: UnDatum[] = require('./data-directory/2year-UNdata.json');
+// const jsonFileResultPath =
+//   'src/refiningData/result-directory/2year-refinedUnData.json';
+// const yearWeightResultPath =
+//   'src/refiningData/yearWeightHashDirectory/2year-unYearWeightHash.json';
 
 console.log('refiningData.js start');
 initiate(unJsonData);
@@ -423,7 +426,7 @@ function makeTotalNeighbor(
 }
 
 /**
- *
+ * 한 노드의 한 연도에 대한 neighbors를 만드는 함수이다.
  * @param similaritiesHash : 해당 연도에서 한 노드의 다른나라와의 similarity hash
  */
 function makeNeighBorsForYear(
@@ -431,25 +434,41 @@ function makeNeighBorsForYear(
 ): CountryCountHash {
   const neighbors: CountryCountHash = {};
   const similarityPassScore: number = 0.5;
-
-  // TODO 가장 높은 노드 2개로 할까?
   const limitCount: number = 2;
+
+  // TODO 높은 점수 두개로 만드는 법
+  const sortedSimilarities = _(similaritiesHash)
+    .map((similarity, otherCountry) => {
+      return {
+        otherCountry,
+        similarity
+      };
+    })
+    .sortBy(o => -o.similarity)
+    .value();
+
+  let standardSimilarity: number = 0;
   let currentCount: number = 0;
-  _.forEach(similaritiesHash, (similarity, otherCountry) => {
-    if (similarity >= similarityPassScore) {
-      neighbors[otherCountry] = similarity;
+  _.forEach(sortedSimilarities, o => {
+    if (currentCount < limitCount) {
+      standardSimilarity = o.similarity;
+      neighbors[o.otherCountry] = o.similarity;
       currentCount++;
     }
-    if (currentCount >= limitCount) {
+    if (standardSimilarity > o.similarity) {
       return false;
     }
   });
 
-  // 높은 점수 두개로 둘까?
-  // 혹은 일정 similarity 점수 이상으로 만든다.
+  // 일정 similarity 점수 이상으로 만드는 방법
+  // let currentCount: number = 0;
   // _.forEach(similaritiesHash, (similarity, otherCountry) => {
   //   if (similarity >= similarityPassScore) {
   //     neighbors[otherCountry] = similarity;
+  //     currentCount++;
+  //   }
+  //   if (currentCount >= limitCount) {
+  //     return false;
   //   }
   // });
 
@@ -480,7 +499,6 @@ function makeYearWeightHash(o: {
   // 최근 연도 ~ 제일 과거 연도 사이의 가운데 연도
   const middleYear: number = minYear + (maxYear - minYear) / 2;
   const halfOfMinToMiddleYear: number = middleYear - minYear;
-  // console.log('middleYear', middleYear);
 
   _.forEach(o.nodesHash, (node, nodeId) => {
     _.forEach(node.neighbors.total, (nodeTotalSimilarity, otherCountry) => {
@@ -494,12 +512,21 @@ function makeYearWeightHash(o: {
           }
         }
       });
-      timeWeight /= halfOfMinToMiddleYear * nodeTotalSimilarity;
-      // console.log('timeWeight!', timeWeight);
+
+      const divider: number = halfOfMinToMiddleYear * nodeTotalSimilarity;
+
+      if (divider !== 0) {
+        timeWeight /= divider;
+      } else {
+        console.log('divider 0 with', node.id, otherCountry);
+      }
+
+      // if (typeof timeWeight !== 'number') {
+      //   timeWeight
+      // }
       yearMeanHash[nodeId][otherCountry] = timeWeight;
     });
   });
 
-  // console.log('yearMeanHash', yearMeanHash);
   return yearMeanHash;
 }

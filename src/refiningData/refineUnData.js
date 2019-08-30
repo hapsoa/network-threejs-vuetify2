@@ -3,8 +3,13 @@ exports.__esModule = true;
 var _ = require('lodash');
 var fs = require('fs');
 var unJsonData = require('./data-directory/UNdata.json');
-var jsonFileResultPath = 'src/refiningData/result-directory/allRefinedData.json';
-var yearWeightResultPath = 'src/refiningData/yearWeightHashDirectory/yearWeightHash.json';
+var jsonFileResultPath = 'src/refiningData/result-directory/refinedUnData.json';
+var yearWeightResultPath = 'src/refiningData/yearWeightHashDirectory/unYearWeightHash.json';
+// const unJsonData: UnDatum[] = require('./data-directory/2year-UNdata.json');
+// const jsonFileResultPath =
+//   'src/refiningData/result-directory/2year-refinedUnData.json';
+// const yearWeightResultPath =
+//   'src/refiningData/yearWeightHashDirectory/2year-unYearWeightHash.json';
 console.log('refiningData.js start');
 initiate(unJsonData);
 //
@@ -155,7 +160,9 @@ function checkSimilarVoteForRcid(votesHash, unData) {
     var similarityForRcid = makeBasicCountryProperty(unData);
     _.forEach(similarityForRcid, function (otherCountriesHash, country) {
         _.forEach(otherCountriesHash, function (otherCountrySimilarity, otherCountry) {
-            if (votesHash[country] === votesHash[otherCountry]) {
+            if (votesHash[country] === votesHash[otherCountry] &&
+                votesHash[country] !== 8 &&
+                votesHash[country] !== 9) {
                 otherCountriesHash[otherCountry] += 1;
             }
             else {
@@ -215,7 +222,6 @@ function makeSimilaritiesHashPerYear(o) {
         // 해당 사건의 연도
         var rcidYear = o.rcidsHash[rcid].year;
         if (!_.has(similaritiesHashPerYear, rcidYear)) {
-            // similaritiesHashPerYear[rcidYear] = {};
             similaritiesHashPerYear[rcidYear] = makeBasicCountryProperty(o.unData);
         }
         // TODO 연도별로 투표 유사할때마다 더한다
@@ -235,7 +241,6 @@ function makeSimilaritiesHashPerYear(o) {
             });
         });
     });
-    // console.log('similaritiesHashPerYear', similaritiesHashPerYear);
     // 연도별 사건의 수만큼 나눈다
     _.forEach(similaritiesHashPerYear, function (similaritiesHash, year) {
         _.forEach(similaritiesHash, function (otherCountryObject, country) {
@@ -290,33 +295,47 @@ function makeTotalNeighbor(neighbors) {
             totalNeighbor[otherCountry] += similarity;
         });
     });
-    // console.log('totalNeighbor', totalNeighbor);
     return totalNeighbor;
 }
 /**
- *
+ * 한 노드의 한 연도에 대한 neighbors를 만드는 함수이다.
  * @param similaritiesHash : 해당 연도에서 한 노드의 다른나라와의 similarity hash
  */
 function makeNeighBorsForYear(similaritiesHash) {
     var neighbors = {};
     var similarityPassScore = 0.5;
-    // 가장 높은 노드 2개로 할까?
     var limitCount = 2;
+    // TODO 높은 점수 두개로 만드는 법
+    var sortedSimilarities = _(similaritiesHash)
+        .map(function (similarity, otherCountry) {
+        return {
+            otherCountry: otherCountry,
+            similarity: similarity
+        };
+    })
+        .sortBy(function (o) { return -o.similarity; })
+        .value();
+    var standardSimilarity = 0;
     var currentCount = 0;
-    _.forEach(similaritiesHash, function (similarity, otherCountry) {
-        if (similarity >= similarityPassScore) {
-            neighbors[otherCountry] = similarity;
+    _.forEach(sortedSimilarities, function (o) {
+        if (currentCount < limitCount) {
+            standardSimilarity = o.similarity;
+            neighbors[o.otherCountry] = o.similarity;
             currentCount++;
         }
-        if (currentCount >= limitCount) {
+        if (standardSimilarity > o.similarity) {
             return false;
         }
     });
-    // 높은 점수 두개로 둘까?
-    // 혹은 일정 similarity 점수 이상으로 만든다.
+    // 일정 similarity 점수 이상으로 만드는 방법
+    // let currentCount: number = 0;
     // _.forEach(similaritiesHash, (similarity, otherCountry) => {
     //   if (similarity >= similarityPassScore) {
     //     neighbors[otherCountry] = similarity;
+    //     currentCount++;
+    //   }
+    //   if (currentCount >= limitCount) {
+    //     return false;
     //   }
     // });
     return neighbors;
@@ -336,7 +355,6 @@ function makeYearWeightHash(o) {
     // 최근 연도 ~ 제일 과거 연도 사이의 가운데 연도
     var middleYear = minYear + (maxYear - minYear) / 2;
     var halfOfMinToMiddleYear = middleYear - minYear;
-    // console.log('middleYear', middleYear);
     _.forEach(o.nodesHash, function (node, nodeId) {
         _.forEach(node.neighbors.total, function (nodeTotalSimilarity, otherCountry) {
             // 공식을 넣는다.
@@ -349,11 +367,15 @@ function makeYearWeightHash(o) {
                     }
                 }
             });
-            timeWeight /= halfOfMinToMiddleYear * nodeTotalSimilarity;
-            // console.log('timeWeight!', timeWeight);
+            var divider = halfOfMinToMiddleYear * nodeTotalSimilarity;
+            if (divider !== 0) {
+                timeWeight /= divider;
+            }
+            // if (typeof timeWeight !== 'number') {
+            //   timeWeight
+            // }
             yearMeanHash[nodeId][otherCountry] = timeWeight;
         });
     });
-    // console.log('yearMeanHash', yearMeanHash);
     return yearMeanHash;
 }

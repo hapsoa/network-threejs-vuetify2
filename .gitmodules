@@ -1,0 +1,3 @@
+[submodule "src/vl"]
+	path = src/vl
+	url = https://github.com/hyunwoo/vl.git

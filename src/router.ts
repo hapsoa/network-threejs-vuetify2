@@ -33,6 +33,11 @@ export default new Router({
       component: () => import('./views/UnBufferGeometryTest')
     },
     {
+      path: '/vl-test',
+      name: 'vl-test',
+      component: () => import('./views/VLTest')
+    },
+    {
       path: '/about',
       name: 'about',
       // route level code-splitting
