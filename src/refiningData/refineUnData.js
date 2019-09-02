@@ -2,14 +2,16 @@
 exports.__esModule = true;
 var _ = require('lodash');
 var fs = require('fs');
-var unJsonData = require('./data-directory/UNdata.json');
-var jsonFileResultPath = 'src/refiningData/result-directory/refinedUnData.json';
-var yearWeightResultPath = 'src/refiningData/yearWeightHashDirectory/unYearWeightHash.json';
-// const unJsonData: UnDatum[] = require('./data-directory/2year-UNdata.json');
+// total data
+// const unJsonData: UnDatum[] = require('./data-directory/UNdata.json');
 // const jsonFileResultPath =
-//   'src/refiningData/result-directory/2year-refinedUnData.json';
+//   'src/refiningData/result-directory/refinedUnData.json';
 // const yearWeightResultPath =
-//   'src/refiningData/yearWeightHashDirectory/2year-unYearWeightHash.json';
+//   'src/refiningData/yearWeightHashDirectory/unYearWeightHash.json';
+// small data
+var unJsonData = require('./data-directory/2year-UNdata.json');
+var jsonFileResultPath = 'src/refiningData/result-directory/2year-refinedUnData.json';
+var yearWeightResultPath = 'src/refiningData/yearWeightHashDirectory/2year-unYearWeightHash.json';
 console.log('refiningData.js start');
 initiate(unJsonData);
 //
@@ -295,7 +297,33 @@ function makeTotalNeighbor(neighbors) {
             totalNeighbor[otherCountry] += similarity;
         });
     });
-    return totalNeighbor;
+    // return totalNeighbor;
+    // 위에서 여기까지는 모든 property를 넘길 수 있다.
+    // totalNeighbor의 property의 수를 최대 2개로 줄일 수 있도록 한다.
+    var limitTotalNeighbor = {};
+    var limitCount = 2;
+    var sortedArray = _(totalNeighbor)
+        .map(function (similarity, otherCountry) {
+        return {
+            otherCountry: otherCountry,
+            similarity: similarity
+        };
+    })
+        .sortBy(function (o) { return -o.similarity; })
+        .value();
+    var standardSimilarity = 0;
+    var currentCount = 0;
+    _.forEach(sortedArray, function (o) {
+        if (currentCount < limitCount) {
+            standardSimilarity = o.similarity;
+            limitTotalNeighbor[o.otherCountry] = o.similarity;
+            currentCount++;
+        }
+        if (standardSimilarity > o.similarity) {
+            return false;
+        }
+    });
+    return limitTotalNeighbor;
 }
 /**
  * 한 노드의 한 연도에 대한 neighbors를 만드는 함수이다.
@@ -303,9 +331,9 @@ function makeTotalNeighbor(neighbors) {
  */
 function makeNeighBorsForYear(similaritiesHash) {
     var neighbors = {};
-    var similarityPassScore = 0.5;
+    // const similarityPassScore: number = 0.5;
     var limitCount = 2;
-    // TODO 높은 점수 두개로 만드는 법
+    // TODO 높은 점수 2개로 만드는 법
     var sortedSimilarities = _(similaritiesHash)
         .map(function (similarity, otherCountry) {
         return {
@@ -370,6 +398,9 @@ function makeYearWeightHash(o) {
             var divider = halfOfMinToMiddleYear * nodeTotalSimilarity;
             if (divider !== 0) {
                 timeWeight /= divider;
+            }
+            else {
+                console.log('divider 0 with', node.id, otherCountry);
             }
             // if (typeof timeWeight !== 'number') {
             //   timeWeight

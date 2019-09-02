@@ -11,8 +11,8 @@ import _ from 'lodash';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 
 // 작은 데이터
-import unNodesHashJson from '@/refiningData/result-directory/refinedData.json';
-import yearWeightHashJson from '@/refiningData/yearWeightHashDirectory/yearWeightHash.json';
+import unNodesHashJson from '@/refiningData/result-directory/2year-refinedUnData.json';
+import yearWeightHashJson from '@/refiningData/yearWeightHashDirectory/2year-unYearWeightHash.json';
 
 // 실데이터 (대용량)
 // import yearWeightHashJson from '@/refiningData/yearWeightHashDirectory/unYearWeightHash.json';
@@ -181,18 +181,20 @@ export default class UnBufferGeometryTest extends Vue {
           const neighborNode = o.unNodesHash[neighbor];
 
           // edge에 색상 넣기
-          let r: number = 0;
-          let g: number = 0;
-          let b: number = 0;
+          let r: number = 255;
+          const g: number = 0;
+          let b: number = 255;
           const yearWeight = o.yearWeightHash[node.id][neighbor];
           if (yearWeight < 0) {
-            r = -255 * yearWeight;
+            // r = -255 * yearWeight;
+            b = 255 * (1 + yearWeight);
           } else if (yearWeight > 0) {
-            b = 255 * yearWeight;
+            // b = 255 * yearWeight;
+            r = 255 * (1 - yearWeight);
           } else {
-            r = 255;
-            g = 255;
-            b = 255;
+            // r = 255;
+            // g = 255;
+            // b = 255;
           }
 
           color.setRGB(r, g, b);

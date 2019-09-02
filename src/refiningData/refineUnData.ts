@@ -59,16 +59,18 @@ interface CountryCountHashPerKey {
 const _: LoDashStatic = require('lodash');
 const fs = require('fs');
 
-const unJsonData: UnDatum[] = require('./data-directory/UNdata.json');
-const jsonFileResultPath =
-  'src/refiningData/result-directory/refinedUnData.json';
-const yearWeightResultPath =
-  'src/refiningData/yearWeightHashDirectory/unYearWeightHash.json';
-// const unJsonData: UnDatum[] = require('./data-directory/2year-UNdata.json');
+// total data
+// const unJsonData: UnDatum[] = require('./data-directory/UNdata.json');
 // const jsonFileResultPath =
-//   'src/refiningData/result-directory/2year-refinedUnData.json';
+//   'src/refiningData/result-directory/refinedUnData.json';
 // const yearWeightResultPath =
-//   'src/refiningData/yearWeightHashDirectory/2year-unYearWeightHash.json';
+//   'src/refiningData/yearWeightHashDirectory/unYearWeightHash.json';
+// small data
+const unJsonData: UnDatum[] = require('./data-directory/2year-UNdata.json');
+const jsonFileResultPath =
+  'src/refiningData/result-directory/2year-refinedUnData.json';
+const yearWeightResultPath =
+  'src/refiningData/yearWeightHashDirectory/2year-unYearWeightHash.json';
 
 console.log('refiningData.js start');
 initiate(unJsonData);
@@ -253,6 +255,7 @@ function checkSimilarVoteForRcid(
         votesHash[country] !== 8 &&
         votesHash[country] !== 9
       ) {
+        // TODO
         otherCountriesHash[otherCountry] += 1;
       } else {
         //
@@ -422,7 +425,37 @@ function makeTotalNeighbor(
       totalNeighbor[otherCountry] += similarity;
     });
   });
-  return totalNeighbor;
+  // return totalNeighbor;
+  // 위에서 여기까지는 모든 property를 넘길 수 있다.
+
+  // totalNeighbor의 property의 수를 최대 2개로 줄일 수 있도록 한다.
+  const limitTotalNeighbor: CountryCountHash = {};
+  const limitCount: number = 2;
+
+  const sortedArray = _(totalNeighbor)
+    .map((similarity, otherCountry) => {
+      return {
+        otherCountry,
+        similarity
+      };
+    })
+    .sortBy(o => -o.similarity)
+    .value();
+
+  let standardSimilarity: number = 0;
+  let currentCount: number = 0;
+  _.forEach(sortedArray, o => {
+    if (currentCount < limitCount) {
+      standardSimilarity = o.similarity;
+      limitTotalNeighbor[o.otherCountry] = o.similarity;
+      currentCount++;
+    }
+    if (standardSimilarity > o.similarity) {
+      return false;
+    }
+  });
+
+  return limitTotalNeighbor;
 }
 
 /**
@@ -433,10 +466,10 @@ function makeNeighBorsForYear(
   similaritiesHash: CountryCountHash
 ): CountryCountHash {
   const neighbors: CountryCountHash = {};
-  const similarityPassScore: number = 0.5;
+  // const similarityPassScore: number = 0.5;
   const limitCount: number = 2;
 
-  // TODO 높은 점수 두개로 만드는 법
+  // TODO 높은 점수 2개로 만드는 법
   const sortedSimilarities = _(similaritiesHash)
     .map((similarity, otherCountry) => {
       return {
