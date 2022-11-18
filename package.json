@@ -28,7 +28,7 @@
     "@vue/cli-plugin-babel": "^3.10.0",
     "@vue/cli-plugin-pwa": "^3.10.0",
     "@vue/cli-plugin-typescript": "^3.10.0",
-    "@vue/cli-service": "^3.10.0",
+    "@vue/cli-service": "^5.0.8",
     "eslint": "^6.2.1",
     "lint-staged": "^8.1.5",
     "sass": "^1.18.0",
